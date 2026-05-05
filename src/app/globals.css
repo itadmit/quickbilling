@@ -87,6 +87,14 @@ body {
   font-feature-settings: "ss01", "ss02";
 }
 
+/* Force form controls to inherit our font instead of the user-agent default.
+   Some browsers' UA stylesheets reset form elements to system fonts —
+   this guarantees Ploni renders inside inputs/textareas/selects/buttons. */
+input, textarea, select, button {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
+
 /* Headings + page titles use Ping (display), like GreenInvoice's .headline-* */
 h1, h2, h3, h4, h5, h6,
 .font-display {

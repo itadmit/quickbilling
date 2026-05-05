@@ -13,6 +13,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { ProjectSwitcher } from "./project-switcher";
+import { signOutAction } from "./sign-out-action";
 
 const NAV = [
   { href: "/customers", label: "לקוחות", Icon: Users },
@@ -70,22 +71,25 @@ export function Sidebar({ user, projects, selectedProjectId }: SidebarProps) {
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t border-white/[0.06]">
-        <div className="flex items-center gap-3 mb-3">
+      <div className="px-3 pt-2 pb-4 space-y-1.5">
+        <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5">
           {user.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.image}
               alt=""
-              className="w-9 h-9 rounded-full bg-white/10"
+              className="w-9 h-9 rounded-full bg-white/10 shrink-0"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-emerald-600 grid place-items-center text-sm font-medium text-white">
-              {user.email[0]?.toUpperCase()}
+            <div className="w-9 h-9 rounded-full bg-emerald-600 grid place-items-center text-sm font-semibold text-white shrink-0">
+              {(user.name ?? user.email)[0]?.toUpperCase()}
             </div>
           )}
-          <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-normal text-white/95 truncate">
+          <div className="text-right min-w-0 flex-1">
+            <div className="text-[11px] text-white/50 capitalize">
+              {user.role}
+            </div>
+            <div className="text-[14px] font-medium text-white truncate">
               {user.name ?? "אזור אישי"}
             </div>
             <div className="text-[11px] text-white/45 truncate ltr-num">
@@ -93,13 +97,14 @@ export function Sidebar({ user, projects, selectedProjectId }: SidebarProps) {
             </div>
           </div>
         </div>
-        <form action="/api/auth/signout" method="post">
+
+        <form action={signOutAction}>
           <button
             type="submit"
-            className="w-full inline-flex items-center gap-2 text-[12px] text-white/50 hover:text-white/90 transition"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium text-white/80 hover:bg-white/6 hover:text-white transition"
           >
-            <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
-            התנתקות
+            <LogOut className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+            <span className="flex-1 text-right">התנתקות</span>
           </button>
         </form>
       </div>

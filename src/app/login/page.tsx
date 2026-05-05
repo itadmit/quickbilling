@@ -43,7 +43,7 @@ export default async function LoginPage({
   }
 
   return (
-    <div dir="rtl" className="min-h-screen grid lg:grid-cols-2">
+    <div dir="rtl" className="min-h-screen grid lg:grid-cols-2 font-sans">
       {/* Brand panel — visible only on lg+, otherwise pushed off-screen */}
       <aside className="hidden lg:flex relative bg-[#022c27] text-white flex-col justify-between p-12 overflow-hidden">
         {/* Decorative gradient blobs */}
@@ -57,19 +57,19 @@ export default async function LoginPage({
             <div className="w-8 h-8 rounded-lg bg-emerald-500/20 grid place-items-center">
               <Zap className="w-4 h-4 text-emerald-300" strokeWidth={2} />
             </div>
-            <div className="text-sm font-medium tracking-wide text-white/90">
+            <div className="text-[14px] font-medium tracking-wide text-white/90">
               Quick Commerce
             </div>
           </div>
         </div>
 
         <div className="relative z-10 max-w-md">
-          <h2 className="text-3xl xl:text-4xl font-bold leading-tight mb-4">
+          <h2 className="text-[32px] xl:text-[40px] font-semibold tracking-tight leading-[1.15] mb-4">
             ניהול חיובים מרכזי
             <br />
             לכל המוצרים שלך
           </h2>
-          <p className="text-white/70 text-base leading-relaxed mb-10">
+          <p className="text-white/70 text-[15px] leading-relaxed mb-10">
             פלטפורמה אחת לתשלומים, מנויים, חשבוניות ועמלות —
             כל הפרוייקטים, מקום אחד.
           </p>
@@ -101,14 +101,14 @@ export default async function LoginPage({
               <div className="w-8 h-8 rounded-lg bg-emerald-100 grid place-items-center">
                 <Zap className="w-4 h-4 text-emerald-700" strokeWidth={2} />
               </div>
-              <div className="text-sm font-medium text-neutral-700">
+              <div className="text-[14px] font-medium text-neutral-700">
                 Quick Commerce
               </div>
             </div>
           </div>
 
           <div className="mb-8">
-            <h1 className="text-[28px] font-bold tracking-tight text-neutral-900 mb-1">
+            <h1 className="text-[26px] font-semibold tracking-tight text-neutral-900 mb-1">
               ברוכים הבאים
             </h1>
             <p className="text-sm text-neutral-500">
@@ -198,7 +198,7 @@ function Field({
         autoComplete={autoComplete}
         placeholder={placeholder}
         dir="ltr"
-        className="w-full text-left rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+        className="w-full text-left rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-sans placeholder:text-neutral-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
       />
     </div>
   );
