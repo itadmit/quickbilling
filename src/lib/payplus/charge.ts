@@ -96,6 +96,10 @@ export async function chargeWithToken(
       };
     }
 
+    console.log("[PayPlus Charge] response.data keys:", Object.keys(response.data ?? {}));
+    console.log("[PayPlus Charge] invoice block:", JSON.stringify(response.data?.invoice ?? null));
+    console.log("[PayPlus Charge] transaction.uid:", response.data?.transaction?.uid);
+
     return {
       success: true,
       transactionUid: response.data?.transaction?.uid,

@@ -16,7 +16,6 @@ import {
   type Product,
 } from "../db/schema";
 import { chargeWithToken } from "../payplus/charge";
-import { getInvoiceDocuments } from "../payplus/transactions";
 import { withVat } from "../payplus/vat";
 import { generateInvoiceNumber } from "./invoice-number";
 import { getVatRate } from "../settings";
@@ -186,17 +185,12 @@ export async function renewSubscription(
     };
   }
 
-  // 7) Fetch the PDF documents PayPlus generated for this charge.
-  // Best-effort: don't fail the whole renewal if this errors.
-  let invoiceDocs: Awaited<ReturnType<typeof getInvoiceDocuments>> = {
-    success: false,
-    documents: [],
-  };
-  if (charge.transactionUid) {
-    invoiceDocs = await getInvoiceDocuments(charge.transactionUid);
-  }
-  const docUuid = invoiceDocs.primaryUuid ?? charge.invoiceUuid;
-  const docUrl = invoiceDocs.primaryUrl ?? charge.invoiceUrl;
+  // PayPlus delivers invoice metadata two ways:
+  //   1) inline on the Charge response (`response.data.invoice`) — sometimes
+  //   2) async via the IPN webhook → handled in /api/webhooks/payplus (PATH B)
+  // We persist whatever the Charge response gave us; the IPN backfills nulls.
+  const docUuid = charge.invoiceUuid;
+  const docUrl = charge.invoiceUrl;
   const docNumber = charge.invoiceNumber;
 
   // 8) Persist invoice + items + charge attempt + advance period.
@@ -257,18 +251,27 @@ export async function renewSubscription(
 
     const wasRecovered = sub.status === "past_due";
 
+    // Fixed-term plans: this charge counts towards the total. When it's the
+    // last installment, mark the subscription expired so it isn't picked up
+    // again on the next cron tick.
+    const newPaymentsCharged = (sub.paymentsCharged ?? 0) + 1;
+    const isFinalInstallment =
+      sub.totalPayments != null && newPaymentsCharged >= sub.totalPayments;
+
     await tx
       .update(subscriptions)
       .set({
-        status: "active",
+        status: isFinalInstallment ? "expired" : "active",
         planId: activePlan.id,
         pendingPlanId: null,
         currentPeriodStart: periodStart.toISOString().slice(0, 10),
         currentPeriodEnd: periodEnd.toISOString().slice(0, 10),
+        paymentsCharged: newPaymentsCharged,
         failedChargeCount: 0,
         dunningStartedAt: null,
         lastFailedChargeAt: null,
         lastFailedChargeError: null,
+        ...(isFinalInstallment ? { cancelledAt: new Date(), cancellationReason: "term_completed" } : {}),
         updatedAt: new Date(),
       })
       .where(eq(subscriptions.id, sub.id));
