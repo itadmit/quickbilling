@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
   customers,
@@ -47,6 +47,17 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const hashHeader = request.headers.get("hash");
   const userAgent = request.headers.get("user-agent");
+
+  // TEMP DEBUG: dump every IPN to DB before any check, so we can inspect
+  // exactly what PayPlus delivers without depending on serverless logs.
+  try {
+    await db.execute(
+      sql`INSERT INTO _ipn_debug (raw_body, hash_header, user_agent, received_at)
+          VALUES (${rawBody}, ${hashHeader ?? null}, ${userAgent ?? null}, now())`,
+    );
+  } catch {
+    // table might not exist yet — ignore
+  }
 
   // In dev, allow unsigned (PayPlus sandbox sometimes omits the header).
   const isProd = process.env.NODE_ENV === "production";
