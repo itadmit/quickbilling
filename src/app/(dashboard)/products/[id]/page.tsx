@@ -54,7 +54,7 @@ export default async function ProjectDetailPage({
   const totalInvoices = invoiceCount[0]?.count ?? 0;
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://billing.quickcommerce.co.il";
+    process.env.NEXT_PUBLIC_APP_URL || "https://billing.my-quickshop.com";
 
   return (
     <div>

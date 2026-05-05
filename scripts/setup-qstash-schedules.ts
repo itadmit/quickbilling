@@ -71,7 +71,7 @@ async function main() {
 
   if (!appUrl) {
     console.error("APP_URL or NEXT_PUBLIC_APP_URL is required");
-    console.error('  e.g.  APP_URL="https://quickbilling.vercel.app" pnpm tsx scripts/setup-qstash-schedules.ts');
+    console.error('  e.g.  APP_URL="https://billing.my-quickshop.com" pnpm tsx scripts/setup-qstash-schedules.ts');
     process.exit(1);
   }
   if (!token) {

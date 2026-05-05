@@ -166,7 +166,7 @@ POST /PaymentPages/generateLink
 
   "refURL_success": "https://app.example.com/billing/success",
   "refURL_failure": "https://app.example.com/billing/failed",
-  "refURL_callback": "https://billing.quickcommerce.co.il/api/webhooks/payplus",
+  "refURL_callback": "https://billing.my-quickshop.com/api/webhooks/payplus",
   "send_failure_callback": true,
 
   "more_info": "QuickShop Pro - חודשי",
