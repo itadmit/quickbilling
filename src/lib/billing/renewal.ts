@@ -16,6 +16,7 @@ import {
   type Product,
 } from "../db/schema";
 import { chargeWithToken } from "../payplus/charge";
+import { getInvoiceDocuments } from "../payplus/transactions";
 import { withVat } from "../payplus/vat";
 import { generateInvoiceNumber } from "./invoice-number";
 import { getVatRate } from "../settings";
@@ -185,7 +186,20 @@ export async function renewSubscription(
     };
   }
 
-  // 7) Persist invoice + items + charge attempt + advance period.
+  // 7) Fetch the PDF documents PayPlus generated for this charge.
+  // Best-effort: don't fail the whole renewal if this errors.
+  let invoiceDocs: Awaited<ReturnType<typeof getInvoiceDocuments>> = {
+    success: false,
+    documents: [],
+  };
+  if (charge.transactionUid) {
+    invoiceDocs = await getInvoiceDocuments(charge.transactionUid);
+  }
+  const docUuid = invoiceDocs.primaryUuid ?? charge.invoiceUuid;
+  const docUrl = invoiceDocs.primaryUrl ?? charge.invoiceUrl;
+  const docNumber = charge.invoiceNumber;
+
+  // 8) Persist invoice + items + charge attempt + advance period.
   const periodStart = new Date();
   const periodEnd = new Date(periodStart);
   if (sub.billingInterval === "yearly") {
@@ -204,9 +218,9 @@ export async function renewSubscription(
         type: "subscription",
         status: "paid",
         invoiceNumber,
-        payplusInvoiceUuid: charge.invoiceUuid,
-        payplusInvoiceNumber: charge.invoiceNumber,
-        payplusInvoiceUrl: charge.invoiceUrl,
+        payplusInvoiceUuid: docUuid,
+        payplusInvoiceNumber: docNumber,
+        payplusInvoiceUrl: docUrl,
         payplusTransactionUid: charge.transactionUid,
         subtotal: baseAmount.toFixed(2),
         vatAmount: (total - baseAmount).toFixed(2),

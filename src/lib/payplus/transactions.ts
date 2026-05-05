@@ -1,6 +1,76 @@
 import { payplusRequest, PAYPLUS_CONFIG } from "./client";
 
 /**
+ * Look up Invoice+ documents (PDFs) attached to a PayPlus transaction.
+ *
+ * Uses the undocumented-on-Charge-response but documented-on-Reports
+ * endpoint `Invoice/GetDocuments`, which returns one row per generated
+ * document (the tax-receipt for a charge, plus credit-invoice + credit-
+ * receipt for a refunded charge).
+ *
+ * Returns the FIRST issued document's original PDF URL — that's the
+ * "main" invoice for the transaction. Subsequent docs (refund / credit)
+ * are captured separately when the refund-by-uid call is made.
+ */
+export async function getInvoiceDocuments(transactionUid: string): Promise<{
+  success: boolean;
+  documents: Array<{
+    type?: string;
+    date?: string;
+    original_doc_url?: string;
+    copy_doc_url?: string;
+  }>;
+  primaryUrl?: string;
+  primaryUuid?: string;
+}> {
+  try {
+    const response = await payplusRequest<{
+      invoices?: Array<{
+        status: string;
+        type: string;
+        date: string;
+        original_doc_url: string;
+        copy_doc_url: string;
+      }>;
+    }>("Invoice/GetDocuments", "POST", {
+      transaction_uid: transactionUid,
+      filter: { take: 5, skip: 0 },
+      terminal_uid: PAYPLUS_CONFIG.terminalUid,
+    });
+
+    type Doc = {
+      status?: string;
+      type?: string;
+      date?: string;
+      original_doc_url?: string;
+      copy_doc_url?: string;
+    };
+    const flat: Doc[] =
+      (response as { invoices?: Doc[] }).invoices ??
+      ((response.data as unknown as { invoices?: Doc[] })?.invoices) ??
+      (Array.isArray(response.data) ? (response.data as Doc[]) : []);
+
+    // Prefer "Invoice Receipt" if present, else first
+    const primary =
+      flat.find((d) => d.type?.toLowerCase().includes("invoice receipt")) ??
+      flat[0];
+
+    // Extract uuid from original_doc_url like /getdoc/s/o/{uuid}.pdf
+    const primaryUuid = primary?.original_doc_url?.match(/\/([0-9a-f-]{36})\.pdf$/i)?.[1];
+
+    return {
+      success: true,
+      documents: flat,
+      primaryUrl: primary?.original_doc_url,
+      primaryUuid,
+    };
+  } catch (err) {
+    console.warn("[PayPlus] getInvoiceDocuments failed:", err);
+    return { success: false, documents: [] };
+  }
+}
+
+/**
  * Look up a single transaction by UID via POST /Transactions/View.
  */
 export async function getTransactionDetails(transactionUid: string): Promise<{
