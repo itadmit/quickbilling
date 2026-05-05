@@ -18,6 +18,11 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Trust the request `Host` header for redirect URL building.
+  // Required when AUTH_URL isn't set (e.g. Vercel preview deployments
+  // with rotating URLs) so NextAuth doesn't fall back to localhost.
+  trustHost: true,
+
   providers: [
     Credentials({
       credentials: {
