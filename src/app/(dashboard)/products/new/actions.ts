@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { eq, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { products, plans } from "@/lib/db/schema";
 import { generateApiKey, generateWebhookSecret } from "@/lib/auth/api-auth";
@@ -29,7 +30,38 @@ export async function createProduct(formData: FormData): Promise<CreateProductRe
     : null;
 
   if (!slug || !name || !invoicePrefix) {
-    throw new Error("Missing required fields");
+    throw new Error("חסרים שדות חובה (שם, slug, או קידומת חשבונית).");
+  }
+
+  if (!/^[A-Z][A-Z0-9]{0,4}$/.test(invoicePrefix)) {
+    throw new Error(
+      "קידומת חשבונית: 2-5 תווים, אנגלית גדולה / ספרות, מתחיל באות.",
+    );
+  }
+
+  if (!/^[a-z][a-z0-9-]*$/.test(slug)) {
+    throw new Error("Slug: lowercase, ללא רווחים, מתחיל באות.");
+  }
+
+  // Pre-check for collisions on slug or invoice_prefix so we can return
+  // a friendly Hebrew error instead of a Postgres unique violation.
+  const existing = await db
+    .select({
+      slug: products.slug,
+      invoicePrefix: products.invoicePrefix,
+    })
+    .from(products)
+    .where(or(eq(products.slug, slug), eq(products.invoicePrefix, invoicePrefix)));
+
+  for (const e of existing) {
+    if (e.slug === slug) {
+      throw new Error(`כבר קיים פרוייקט עם ה-slug "${slug}".`);
+    }
+    if (e.invoicePrefix === invoicePrefix) {
+      throw new Error(
+        `קידומת החשבונית "${invoicePrefix}" כבר בשימוש בפרוייקט אחר. בחר קידומת אחרת (לדוגמה: ${invoicePrefix}2).`,
+      );
+    }
   }
 
   const planRaws = JSON.parse(String(formData.get("plans") || "[]")) as Array<{

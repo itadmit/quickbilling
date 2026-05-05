@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, KeyRound, Shield, Power } from "lucide-react";
+import { ArrowRight, KeyRound, Shield, Power, Pencil } from "lucide-react";
 import { eq, desc, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { products, plans, subscriptions, invoices } from "@/lib/db/schema";
@@ -87,17 +87,30 @@ export default async function ProjectDetailPage({
           </div>
           <div className="text-sm text-neutral-500 ltr-num">/{product.slug}</div>
         </div>
-        <form action={toggleActive}>
-          <input type="hidden" name="id" value={product.id} />
-          <input type="hidden" name="active" value={String(!product.active)} />
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-300"
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/products/${product.id}/edit`}
+            className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition"
           >
-            <Power className="w-3.5 h-3.5" />
-            {product.active ? "כבה" : "הפעל"}
-          </button>
-        </form>
+            <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} />
+            עריכה
+          </Link>
+          <form action={toggleActive}>
+            <input type="hidden" name="id" value={product.id} />
+            <input
+              type="hidden"
+              name="active"
+              value={String(!product.active)}
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition"
+            >
+              <Power className="w-3.5 h-3.5" strokeWidth={1.75} />
+              {product.active ? "כבה" : "הפעל"}
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Stats */}

@@ -105,7 +105,7 @@ export const products = pgTable(
     baseUrl: varchar("base_url", { length: 255 }),
     apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull(),
     webhookSecret: varchar("webhook_secret", { length: 255 }).notNull(),
-    invoicePrefix: varchar("invoice_prefix", { length: 10 }).notNull(),
+    invoicePrefix: varchar("invoice_prefix", { length: 10 }).notNull().unique(),
     defaultTrialDays: integer("default_trial_days").default(14).notNull(),
     defaultFeePercentage: decimal("default_fee_percentage", {
       precision: 5,

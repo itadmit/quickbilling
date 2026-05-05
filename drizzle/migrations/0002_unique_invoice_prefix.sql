@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD CONSTRAINT "products_invoice_prefix_unique" UNIQUE("invoice_prefix");

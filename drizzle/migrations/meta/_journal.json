@@ -15,6 +15,13 @@
       "when": 1777980228665,
       "tag": "0001_friendly_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777989298861,
+      "tag": "0002_unique_invoice_prefix",
+      "breakpoints": true
     }
   ]
 }
