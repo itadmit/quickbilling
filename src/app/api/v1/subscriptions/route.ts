@@ -20,6 +20,7 @@ const schema = z.object({
   custom_fee_percentage: z.number().positive().max(1).optional(),
   payment_method_id: z.string().uuid().optional(),
   start_date: z.string().optional(),
+  total_payments: z.number().int().positive().optional(),
 });
 
 function serialize(s: Subscription) {
@@ -39,6 +40,8 @@ function serialize(s: Subscription) {
     payment_method_id: s.paymentMethodId,
     cancel_at_period_end: s.cancelAtPeriodEnd,
     pending_plan_id: s.pendingPlanId,
+    total_payments: s.totalPayments,
+    payments_charged: s.paymentsCharged,
     created_at: s.createdAt,
     updated_at: s.updatedAt,
   };
@@ -128,6 +131,7 @@ export const POST = withProductAuth(async (ctx) => {
       customMonthlyPrice: data.custom_monthly_price?.toFixed(2),
       customFeePercentage: data.custom_fee_percentage?.toFixed(4),
       paymentMethodId: data.payment_method_id,
+      totalPayments: data.total_payments,
     })
     .returning();
 

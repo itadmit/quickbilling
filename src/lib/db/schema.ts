@@ -262,6 +262,17 @@ export const subscriptions = pgTable(
 
     pendingPlanId: uuid("pending_plan_id").references(() => plans.id),
 
+    /**
+     * Fixed-term billing.
+     *   totalPayments=null      → open-ended (charges every period until cancelled)
+     *   totalPayments=N         → installment plan (e.g. 12 monthly charges then completes)
+     * paymentsCharged increments on every successful renewal charge. When
+     * paymentsCharged >= totalPayments, the subscription transitions to
+     * status='expired' instead of advancing the period.
+     */
+    totalPayments: integer("total_payments"),
+    paymentsCharged: integer("payments_charged").default(0).notNull(),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

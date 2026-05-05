@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Phone, Hash, Calendar, ExternalLink } from "lucide-react";
+import { ArrowRight, Phone, Hash, Calendar, ExternalLink, Pencil } from "lucide-react";
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db/client";
@@ -64,11 +64,20 @@ export default async function CustomerDetailPage({
         חזרה ללקוחות
       </Link>
 
-      <div className="mb-8">
-        <h1 className="text-[26px] font-semibold tracking-tight text-neutral-900">
-          {customer.name ?? customer.email}
-        </h1>
-        <div className="text-sm text-neutral-500 mt-1 ltr-num">{customer.email}</div>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[26px] font-semibold tracking-tight text-neutral-900">
+            {customer.name ?? customer.email}
+          </h1>
+          <div className="text-sm text-neutral-500 mt-1 ltr-num">{customer.email}</div>
+        </div>
+        <Link
+          href={`/customers/${customer.id}/edit`}
+          className="inline-flex items-center gap-1.5 bg-neutral-900 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-neutral-700 transition"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          ערוך לקוח
+        </Link>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
