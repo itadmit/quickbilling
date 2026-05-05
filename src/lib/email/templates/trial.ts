@@ -1,4 +1,4 @@
-import { emailLayout, escapeHtml } from "../layout";
+import { emailLayout, emailPlainText, escapeHtml } from "../layout";
 import { sendEmail } from "../resend-client";
 
 export interface TrialEndingSoonParams {
@@ -34,7 +34,22 @@ export async function sendTrialEndingSoonEmail(params: TrialEndingSoonParams) {
     ctaLabel: params.hasPaymentMethod ? undefined : "הכנס אמצעי תשלום",
   });
 
-  return sendEmail({ to: params.to, subject, html });
+  const text = emailPlainText({
+    title: subject,
+    bodyText: [
+      `שלום ${params.customerName},`,
+      ``,
+      `התקופת הניסיון שלך ב-${params.productName} מסתיימת בעוד ${params.daysRemaining} ימים.`,
+      ``,
+      params.hasPaymentMethod
+        ? `אמצעי התשלום שלך כבר מוגדר — לא נדרשת פעולה. ביום סיום התקופה החיוב הראשון יצא אוטומטית.`
+        : `אין לך אמצעי תשלום פעיל. כדי שלא תאבד גישה למוצר, אנא הכנס פרטי תשלום עכשיו.`,
+    ].join("\n"),
+    ctaUrl: params.hasPaymentMethod ? undefined : params.setupPaymentUrl,
+    ctaLabel: params.hasPaymentMethod ? undefined : "הכנס אמצעי תשלום",
+  });
+
+  return sendEmail({ to: params.to, subject, html, text });
 }
 
 export interface TrialCancelledParams {
@@ -62,5 +77,18 @@ export async function sendTrialCancelledEmail(params: TrialCancelledParams) {
     ctaLabel: "התחל מנוי",
   });
 
-  return sendEmail({ to: params.to, subject, html });
+  const text = emailPlainText({
+    title: subject,
+    bodyText: [
+      `שלום ${params.customerName},`,
+      ``,
+      `התקופת הניסיון שלך ב-${params.productName} הסתיימה וטרם הוכנס אמצעי תשלום, ולכן המנוי בוטל.`,
+      ``,
+      `אם תרצה להמשיך, תוכל להפעיל מנוי חדש בכל עת.`,
+    ].join("\n"),
+    ctaUrl: params.reactivateUrl,
+    ctaLabel: "התחל מנוי",
+  });
+
+  return sendEmail({ to: params.to, subject, html, text });
 }

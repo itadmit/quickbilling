@@ -1,4 +1,4 @@
-import { emailLayout, escapeHtml } from "../layout";
+import { emailLayout, emailPlainText, escapeHtml } from "../layout";
 import { sendEmail, getEmailAdminBcc } from "../resend-client";
 
 export interface DunningEmailParams {
@@ -44,10 +44,32 @@ export async function sendDunningEmail(params: DunningEmailParams) {
     ctaLabel: "עדכון אמצעי תשלום",
   });
 
+  const text = emailPlainText({
+    title: subject,
+    bodyText: [
+      `שלום ${params.customerName},`,
+      ``,
+      `ניסינו לחייב את אמצעי התשלום שלך עבור ${params.productName} והחיוב לא הצליח.`,
+      ``,
+      `ניסיון: ${params.attemptNumber} מתוך ${params.totalAttempts}`,
+      `ימים עד ביטול: ${params.daysUntilCancellation}`,
+      params.errorMessage ? `סיבה: ${params.errorMessage}` : "",
+      ``,
+      isFinalAttempt
+        ? `אם לא נצליח לחייב היום, המנוי יבוטל אוטומטית.`
+        : `אנא עדכן את אמצעי התשלום בהקדם כדי להימנע מהפסקת השירות.`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    ctaUrl: params.updatePaymentUrl,
+    ctaLabel: "עדכון אמצעי תשלום",
+  });
+
   return sendEmail({
     to: params.to,
     subject,
     html,
+    text,
     bcc: params.attemptNumber >= 2 ? [getEmailAdminBcc()] : undefined,
   });
 }
@@ -79,5 +101,18 @@ export async function sendSubscriptionCancelledEmail(params: SubscriptionCancell
     ctaLabel: "חידוש מנוי",
   });
 
-  return sendEmail({ to: params.to, subject, html });
+  const text = emailPlainText({
+    title: subject,
+    bodyText: [
+      `שלום ${params.customerName},`,
+      ``,
+      `לאחר מספר ניסיונות חיוב כושלים, בוטל המנוי שלך עבור ${params.productName}.`,
+      ``,
+      `תוכל להפעיל שוב את המנוי בכל עת על ידי הכנסת אמצעי תשלום תקין.`,
+    ].join("\n"),
+    ctaUrl: params.reactivateUrl,
+    ctaLabel: "חידוש מנוי",
+  });
+
+  return sendEmail({ to: params.to, subject, html, text });
 }
