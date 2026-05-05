@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Ping";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ping-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ping";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ping-medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ping";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ping-bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ping";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ping-heavy.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Ploni";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ploni-regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "Ploni";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ploni-medium.otf") format("opentype");
+}
+@font-face {
+  font-family: "Ploni";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ploni-demibold.otf") format("opentype");
+}
+@font-face {
+  font-family: "Ploni";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/ploni-bold.otf") format("opentype");
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Body / UI text — matches GreenInvoice's --font-family-text */
+  --font-sans: "Ploni", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", "Noto Sans Hebrew", "Arial Hebrew", sans-serif;
+  /* Display / headlines — matches GreenInvoice's --font-family-titles */
+  --font-display: "Ping", "Ploni", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans Hebrew", "Arial Hebrew",
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "ss02";
+}
+
+/* Headings + page titles use Ping (display), like GreenInvoice's .headline-* */
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+h1 { font-weight: 800; }
+
+/*
+ * Use for strings that should display left-to-right inside an RTL page —
+ * phone numbers, emails, currency, code identifiers, slugs.
+ * `isolate` keeps the wrapped content in its own BIDI context so it
+ * doesn't fight with the surrounding RTL flow, but DOES NOT reverse
+ * Hebrew letters that happen to be inside (unlike `bidi-override`).
+ */
+.ltr-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Force LTR rendering for purely-numeric strings where you want digits
+   reading left-to-right even though they're inside an RTL block. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
