@@ -138,6 +138,14 @@ h1 { font-weight: 800; }
 .ltr-num {
   direction: ltr;
   unicode-bidi: isolate;
+  text-align: right;
+}
+
+/* Inputs/textareas with .ltr-num should let typed LTR content start
+   from the left, the natural typing position for that direction. */
+input.ltr-num,
+textarea.ltr-num {
+  text-align: left;
 }
 
 /* Force LTR rendering for purely-numeric strings where you want digits
