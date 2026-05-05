@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
   customers,
+  invoices,
   paymentMethods,
   paymentMethodSetupSessions,
 } from "@/lib/db/schema";
@@ -66,6 +67,48 @@ export async function POST(request: Request) {
   const event = normalizePayPlusEvent(payload);
   const moreInfo = parseMoreInfo<MoreInfoData>(event.moreInfo1);
 
+  // ─── PATH B: post-charge IPN (no setup-session context) ────────────
+  // PayPlus issues invoices asynchronously and posts them back here.
+  // If the IPN carries a transaction_uid that maps to one of our invoices
+  // and that invoice doesn't yet have its PayPlus invoice URL filled in,
+  // patch it. Idempotent: re-deliveries are no-ops once URL is set.
+  if (
+    !moreInfo?.contextId &&
+    event.transactionUid &&
+    (event.invoiceUuid || event.invoiceUrl)
+  ) {
+    const [inv] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.payplusTransactionUid, event.transactionUid))
+      .limit(1);
+
+    if (inv && !inv.payplusInvoiceUrl) {
+      await db
+        .update(invoices)
+        .set({
+          payplusInvoiceUuid: event.invoiceUuid ?? inv.payplusInvoiceUuid,
+          payplusInvoiceNumber:
+            event.invoiceNumber ?? inv.payplusInvoiceNumber,
+          payplusInvoiceUrl: event.invoiceUrl ?? inv.payplusInvoiceUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, inv.id));
+      return NextResponse.json({
+        ok: true,
+        path: "post_charge",
+        invoice_id: inv.id,
+        attached_pdf: true,
+      });
+    }
+    return NextResponse.json({
+      ok: true,
+      path: "post_charge",
+      attached_pdf: false,
+    });
+  }
+
+  // ─── PATH A: tokenization callback ────────────────────────────────
   if (!moreInfo?.customerId || !moreInfo?.contextId) {
     console.warn("[payplus webhook] missing more_info_1, ignoring", {
       transactionUid: event.transactionUid,
