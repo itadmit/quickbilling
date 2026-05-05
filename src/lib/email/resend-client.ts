@@ -12,20 +12,35 @@ export function getResend(): Resend {
   return _resend;
 }
 
-export const EMAIL_FROM = process.env.EMAIL_FROM || "billing@quickcommerce.co.il";
-export const EMAIL_ADMIN_BCC = process.env.EMAIL_ADMIN_BCC || "quickshop.israel@gmail.com";
+const DEFAULT_FROM = "Quick Commerce Billing <noreply@billing.my-quickshop.com>";
+const DEFAULT_ADMIN_BCC = "quickshop.israel@gmail.com";
+
+/**
+ * Read EMAIL_FROM at call time, not at module-load time. Required because
+ * scripts using `dotenv.config()` execute AFTER ESM imports — a const
+ * exported here would lock in `undefined` from `process.env` and silently
+ * fall back to the default before .env.local is loaded.
+ */
+export function getEmailFrom(): string {
+  return process.env.EMAIL_FROM || DEFAULT_FROM;
+}
+
+export function getEmailAdminBcc(): string {
+  return process.env.EMAIL_ADMIN_BCC || DEFAULT_ADMIN_BCC;
+}
 
 export interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
   bcc?: string[];
+  from?: string;
 }
 
 export async function sendEmail(params: SendEmailParams) {
   const r = getResend();
   return r.emails.send({
-    from: EMAIL_FROM,
+    from: params.from || getEmailFrom(),
     to: params.to,
     subject: params.subject,
     html: params.html,

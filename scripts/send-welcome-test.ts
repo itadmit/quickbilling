@@ -2,7 +2,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config({ path: ".env" });
 
-import { sendEmail, EMAIL_FROM } from "../src/lib/email/resend-client";
+import { sendEmail, getEmailFrom } from "../src/lib/email/resend-client";
 import { emailLayout } from "../src/lib/email/layout";
 
 interface Recipient {
@@ -11,7 +11,8 @@ interface Recipient {
 }
 
 const RECIPIENTS: Recipient[] = [
-  { email: "quickbillingisrael@gmail.com", name: "צוות Quick Commerce" },
+  { email: "itadmit@gmail.com", name: "איתי" },
+  { email: "0547359@gmail.com", name: "מריה" },
 ];
 
 function welcomeHtml(name: string): string {
@@ -31,7 +32,7 @@ function welcomeHtml(name: string): string {
 }
 
 async function main() {
-  console.log(`📧 Sending from: ${EMAIL_FROM}\n`);
+  console.log(`📧 Sending from: ${getEmailFrom()}\n`);
 
   for (const r of RECIPIENTS) {
     process.stdout.write(`→ ${r.email} ... `);

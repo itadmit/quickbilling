@@ -1,5 +1,5 @@
 import { emailLayout, escapeHtml } from "../layout";
-import { sendEmail, EMAIL_ADMIN_BCC } from "../resend-client";
+import { sendEmail, getEmailAdminBcc } from "../resend-client";
 
 export interface DunningEmailParams {
   to: string;
@@ -48,7 +48,7 @@ export async function sendDunningEmail(params: DunningEmailParams) {
     to: params.to,
     subject,
     html,
-    bcc: params.attemptNumber >= 2 ? [EMAIL_ADMIN_BCC] : undefined,
+    bcc: params.attemptNumber >= 2 ? [getEmailAdminBcc()] : undefined,
   });
 }
 
