@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Pacifico&display=swap");
 
 @font-face {
   font-family: "Ping";
@@ -104,6 +105,12 @@ h1, h2, h3, h4, h5, h6,
   letter-spacing: -0.005em;
 }
 h1 { font-weight: 800; }
+
+/* Brand wordmark — used wherever "QuickCommerce" appears as a logo. */
+.font-logo {
+  font-family: "Pacifico", cursive;
+  letter-spacing: 0;
+}
 
 /*
  * Use for strings that should display left-to-right inside an RTL page —

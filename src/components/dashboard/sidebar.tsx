@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ProjectSwitcher } from "./project-switcher";
 import { signOutAction } from "./sign-out-action";
+import { Logo } from "@/components/logo";
 
 const NAV = [
   { href: "/customers", label: "לקוחות", Icon: Users },
@@ -39,7 +40,10 @@ export function Sidebar({ user, projects, selectedProjectId }: SidebarProps) {
   const pathname = usePathname();
   return (
     <aside className="w-60 shrink-0 bg-[#033841] text-white flex flex-col">
-      <div className="px-3 pt-4 pb-2">
+      <div className="px-5 pt-5 pb-3">
+        <Logo size="md" tone="light" />
+      </div>
+      <div className="px-3 pb-2">
         <ProjectSwitcher
           projects={projects}
           selectedId={selectedProjectId}
