@@ -28,5 +28,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip the middleware for any path that contains a file extension —
+  // i.e. anything served from /public (fonts, illustrations, images, etc.).
+  // Without this, requests for /fonts/ping-regular.woff2 hit the auth check
+  // and get a 200 HTML redirect to /login, which the browser then tries to
+  // parse as a font and chokes on with "OTS parsing error: invalid sfntVersion".
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
