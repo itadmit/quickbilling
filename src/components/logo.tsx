@@ -17,12 +17,15 @@ export function Logo({
     md: "text-xl",
     lg: "text-3xl",
   }[size];
-  const toneClass = tone === "light" ? "text-white" : "text-neutral-900";
+  const toneClass = tone === "light" ? "text-white" : "";
 
   return (
     <span
       className={`font-logo ${sizeClass} ${toneClass} ${className}`}
-      style={{ lineHeight: 1.5 }}
+      style={{
+        lineHeight: 1.5,
+        color: tone === "dark" ? "#033841" : undefined,
+      }}
       dir="ltr"
     >
       QuickCommerce

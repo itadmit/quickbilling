@@ -40,7 +40,7 @@ export default async function LoginPage({
   return (
     <div
       dir="rtl"
-      className="min-h-screen grid grid-cols-1 lg:grid-cols-[4fr_1fr] font-sans bg-white"
+      className="min-h-screen grid grid-cols-1 lg:grid-cols-[7fr_3fr] font-sans bg-white"
     >
       {/* Form panel — 80% (start side in RTL = right) */}
       <main className="relative flex items-center justify-center px-6 py-12">
@@ -115,8 +115,8 @@ export default async function LoginPage({
         className="hidden lg:block"
         style={{
           background:
-            "#1a7870 url(/illustrations/signin-hero.svg) center 150px no-repeat",
-          backgroundSize: "85%",
+            "#1a7870 url(/illustrations/signin-hero.svg) center no-repeat",
+          backgroundSize: "100%",
         }}
       />
     </div>

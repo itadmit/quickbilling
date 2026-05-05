@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Pacifico&display=swap");
+@import "tailwindcss";
 
 @font-face {
   font-family: "Ping";
@@ -94,6 +94,22 @@ body {
 input, textarea, select, button {
   font-family: inherit;
   font-feature-settings: inherit;
+}
+
+/* Kill the lavender/yellow Chrome+Safari autofill background.
+   The 9999s color transition is the standard hack — by the time it would
+   visually transition, the user has long left the page. The text color is
+   forced back to inherit so the value stays readable. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: inherit;
+  caret-color: inherit;
+  transition: background-color 9999s ease-in-out 0s,
+              color 9999s ease-in-out 0s;
 }
 
 /* Headings + page titles use Ping (display), like GreenInvoice's .headline-* */
