@@ -7,6 +7,7 @@ import {
   customerProductLinks,
   type Customer,
 } from "@/lib/db/schema";
+import { emitWebhook } from "@/lib/webhooks/delivery";
 
 const upsertSchema = z.object({
   email: z.string().email(),
@@ -105,6 +106,30 @@ export const POST = withProductAuth(async (ctx) => {
           updatedAt: new Date(),
         },
       });
+
+    if (createdNew) {
+      await emitWebhook({
+        productId: ctx.product.id,
+        eventType: "customer.created",
+        payload: {
+          customer_id: customer.id,
+          email: customer.email,
+          phone: customer.phone,
+          name: customer.name,
+          external_id,
+        },
+      });
+    } else {
+      await emitWebhook({
+        productId: ctx.product.id,
+        eventType: "customer.updated",
+        payload: {
+          customer_id: customer.id,
+          email: customer.email,
+          external_id,
+        },
+      });
+    }
 
     return {
       status: createdNew ? 201 : 200,

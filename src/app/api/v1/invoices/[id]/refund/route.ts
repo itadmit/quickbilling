@@ -4,6 +4,7 @@ import { withProductAuth } from "@/lib/auth/handler";
 import { db } from "@/lib/db/client";
 import { invoices } from "@/lib/db/schema";
 import { refundTransaction } from "@/lib/payplus/transactions";
+import { emitWebhook } from "@/lib/webhooks/delivery";
 
 const schema = z.object({
   amount: z.number().positive().optional(),
@@ -71,6 +72,20 @@ export const POST = withProductAuth(async (ctx, params) => {
     })
     .where(eq(invoices.id, inv.id))
     .returning();
+
+  await emitWebhook({
+    productId: ctx.product.id,
+    eventType: "invoice.refunded",
+    payload: {
+      invoice_id: updated.id,
+      invoice_number: updated.invoiceNumber,
+      customer_id: updated.customerId,
+      subscription_id: updated.subscriptionId,
+      amount: refundAmount,
+      payplus_refund_uid: result.refundUid,
+      reason: parsed.data.reason,
+    },
+  });
 
   return {
     status: 200,

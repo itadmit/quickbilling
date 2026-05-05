@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { withProductAuth } from "@/lib/auth/handler";
 import { db } from "@/lib/db/client";
 import { subscriptions } from "@/lib/db/schema";
+import { emitWebhook } from "@/lib/webhooks/delivery";
 
 const schema = z.object({
   reason: z.string().optional(),
@@ -50,6 +51,20 @@ export const POST = withProductAuth(async (ctx, params) => {
     .set({ ...updates, updatedAt: new Date() })
     .where(eq(subscriptions.id, params.id))
     .returning();
+
+  // Only emit when actually cancelled (not when scheduling cancel_at_period_end)
+  if (updated.status === "cancelled") {
+    await emitWebhook({
+      productId: ctx.product.id,
+      eventType: "subscription.cancelled",
+      payload: {
+        subscription_id: updated.id,
+        customer_id: updated.customerId,
+        reason: parsed.data.reason,
+        cancelled_by: "product_api",
+      },
+    });
+  }
 
   return {
     status: 200,

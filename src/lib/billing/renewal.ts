@@ -19,6 +19,7 @@ import { chargeWithToken } from "../payplus/charge";
 import { withVat } from "../payplus/vat";
 import { generateInvoiceNumber } from "./invoice-number";
 import { getVatRate } from "../settings";
+import { emitWebhook } from "../webhooks/delivery";
 
 export interface RenewalRow {
   subscription: Subscription;
@@ -142,6 +143,7 @@ export async function renewSubscription(
 
   if (!charge.success) {
     const failedCount = (sub.failedChargeCount ?? 0) + 1;
+    const isFirstFailure = !sub.dunningStartedAt;
     await db
       .update(subscriptions)
       .set({
@@ -149,12 +151,32 @@ export async function renewSubscription(
         failedChargeCount: failedCount,
         lastFailedChargeAt: new Date(),
         lastFailedChargeError: charge.errorMessage ?? "unknown",
-        ...(sub.dunningStartedAt
-          ? {}
-          : { dunningStartedAt: new Date() }),
+        ...(isFirstFailure ? { dunningStartedAt: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(subscriptions.id, sub.id));
+
+    await emitWebhook({
+      productId: product.id,
+      eventType: "charge.failed",
+      payload: {
+        subscription_id: sub.id,
+        customer_id: customer.id,
+        attempt: failedCount,
+        error_code: charge.errorCode,
+        error_message: charge.errorMessage,
+      },
+    });
+    if (isFirstFailure) {
+      await emitWebhook({
+        productId: product.id,
+        eventType: "charge.dunning_started",
+        payload: {
+          subscription_id: sub.id,
+          customer_id: customer.id,
+        },
+      });
+    }
 
     return {
       ok: false,
@@ -219,6 +241,8 @@ export async function renewSubscription(
       attemptedAt: new Date(),
     });
 
+    const wasRecovered = sub.status === "past_due";
+
     await tx
       .update(subscriptions)
       .set({
@@ -234,6 +258,46 @@ export async function renewSubscription(
         updatedAt: new Date(),
       })
       .where(eq(subscriptions.id, sub.id));
+
+    // Emit webhooks AFTER tx commits — but emitWebhook only enqueues, so safe to call here.
+    await emitWebhook({
+      productId: product.id,
+      eventType: "invoice.paid",
+      payload: {
+        invoice_id: inv.id,
+        invoice_number: inv.invoiceNumber,
+        invoice_url: inv.payplusInvoiceUrl,
+        subscription_id: sub.id,
+        customer_id: customer.id,
+        amount: inv.totalAmount,
+        currency: inv.currency,
+        period_start: inv.periodStart,
+        period_end: inv.periodEnd,
+      },
+    });
+    if (wasRecovered) {
+      await emitWebhook({
+        productId: product.id,
+        eventType: "charge.recovered",
+        payload: {
+          subscription_id: sub.id,
+          customer_id: customer.id,
+          invoice_id: inv.id,
+        },
+      });
+    }
+    if (sub.planId !== activePlan.id) {
+      await emitWebhook({
+        productId: product.id,
+        eventType: "subscription.updated",
+        payload: {
+          subscription_id: sub.id,
+          customer_id: customer.id,
+          previous_plan_id: sub.planId,
+          new_plan_id: activePlan.id,
+        },
+      });
+    }
 
     return { ok: true, invoiceId: inv.id, invoiceNumber };
   });

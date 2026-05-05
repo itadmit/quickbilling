@@ -9,6 +9,7 @@ import {
   subscriptions,
   type Subscription,
 } from "@/lib/db/schema";
+import { emitWebhook } from "@/lib/webhooks/delivery";
 
 const schema = z.object({
   customer_id: z.string().uuid(),
@@ -129,6 +130,20 @@ export const POST = withProductAuth(async (ctx) => {
       paymentMethodId: data.payment_method_id,
     })
     .returning();
+
+  await emitWebhook({
+    productId: ctx.product.id,
+    eventType: "subscription.created",
+    payload: {
+      subscription_id: created.id,
+      customer_id: customer.id,
+      plan_id: plan.id,
+      plan_code: plan.code,
+      status: created.status,
+      trial_ends_at: created.trialEndsAt,
+      current_period_end: created.currentPeriodEnd,
+    },
+  });
 
   return {
     status: 201,

@@ -13,6 +13,7 @@ import {
   type PayPlusIpnPayload,
   type PayPlusRedirectPayload,
 } from "@/lib/payplus/webhooks";
+import { emitWebhook } from "@/lib/webhooks/delivery";
 
 interface MoreInfoData {
   type: "subscription_setup" | "card_update" | "one_time" | string;
@@ -137,7 +138,19 @@ export async function POST(request: Request) {
     })
     .where(eq(paymentMethodSetupSessions.id, session.id));
 
-  // TODO: emit outbound webhook 'payment_method.created' to product
+  await emitWebhook({
+    productId: session.productId,
+    eventType: "payment_method.created",
+    payload: {
+      payment_method_id: pm.id,
+      customer_id: moreInfo.customerId,
+      card_brand: pm.cardBrand,
+      card_last4: pm.cardLast4,
+      card_expiry: pm.cardExpiry,
+      setup_session_id: session.id,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     payment_method_id: pm.id,

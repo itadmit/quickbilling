@@ -1,14 +1,52 @@
 import type { PayPlusResponse } from "./types";
 
+/**
+ * PayPlus credential resolution.
+ *
+ * The .env file holds two sets of keys side-by-side:
+ *   - `PAYPLUS_*`        → production (restapi.payplus.co.il)
+ *   - `PAYPLUS_*_dev`    → staging/dev (restapidev.payplus.co.il)
+ *
+ * Selection rule:
+ *   - In production builds (Vercel deploys, NODE_ENV=production) → use prod keys.
+ *   - In dev (localhost, NODE_ENV=development|test) → use `_dev` keys.
+ *
+ * Override at runtime by setting `PAYPLUS_FORCE_ENV=production|dev`.
+ */
+function pickPayPlusEnv(): "prod" | "dev" {
+  const forced = process.env.PAYPLUS_FORCE_ENV?.toLowerCase();
+  if (forced === "production" || forced === "prod") return "prod";
+  if (forced === "dev" || forced === "staging") return "dev";
+  return process.env.NODE_ENV === "production" ? "prod" : "dev";
+}
+
+const ENV = pickPayPlusEnv();
+const SUFFIX = ENV === "dev" ? "_dev" : "";
+
+function envOr(name: string, fallback = ""): string {
+  return process.env[name] || fallback;
+}
+
 export const PAYPLUS_CONFIG = {
+  env: ENV,
   apiUrl:
-    process.env.PAYPLUS_API_URL || "https://restapidev.payplus.co.il/api/v1.0",
-  apiKey: process.env.PAYPLUS_API_KEY || "",
-  secretKey: process.env.PAYPLUS_SECRET_KEY || "",
-  terminalUid: process.env.PAYPLUS_TERMINAL_UID || "",
-  cashierUid: process.env.PAYPLUS_CASHIER_UID || "",
-  paymentPageUid: process.env.PAYPLUS_PAYMENT_PAGE_UID || "",
+    envOr(`PAYPLUS_API_URL${SUFFIX}`) ||
+    (ENV === "dev"
+      ? "https://restapidev.payplus.co.il/api/v1.0"
+      : "https://restapi.payplus.co.il/api/v1.0"),
+  apiKey: envOr(`PAYPLUS_API_KEY${SUFFIX}`),
+  secretKey: envOr(`PAYPLUS_SECRET_KEY${SUFFIX}`),
+  terminalUid: envOr(`PAYPLUS_TERMINAL_UID${SUFFIX}`),
+  cashierUid: envOr(`PAYPLUS_CASHIER_UID${SUFFIX}`),
+  paymentPageUid: envOr(`PAYPLUS_PAYMENT_PAGE_UID${SUFFIX}`),
 } as const;
+
+if (process.env.NODE_ENV !== "test") {
+  // eslint-disable-next-line no-console
+  console.log(
+    `[PayPlus] using ${ENV} credentials → ${PAYPLUS_CONFIG.apiUrl}`,
+  );
+}
 
 export class PayPlusError extends Error {
   constructor(
