@@ -3,7 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { withProductAuth } from "@/lib/auth/handler";
 import { db } from "@/lib/db/client";
 import { invoices } from "@/lib/db/schema";
-import { refundTransaction } from "@/lib/payplus/transactions";
+import {
+  refundTransaction,
+  getInvoiceForTransaction,
+} from "@/lib/payplus/transactions";
 import { emitWebhook } from "@/lib/webhooks/delivery";
 
 const schema = z.object({
@@ -63,11 +66,22 @@ export const POST = withProductAuth(async (ctx, params) => {
     };
   }
 
+  // Pull the credit-note document for this refund. Best-effort: don't
+  // fail the refund if the lookup errors. The backfill cron sweeps
+  // anything that's still missing later.
+  const refundDoc = result.refundUid
+    ? await getInvoiceForTransaction(result.refundUid)
+    : { invoiceUuid: undefined, invoiceNumber: undefined, invoiceUrl: undefined };
+
   const [updated] = await db
     .update(invoices)
     .set({
       status: "refunded",
       refundedAt: new Date(),
+      payplusRefundTransactionUid: result.refundUid,
+      payplusRefundInvoiceUuid: refundDoc.invoiceUuid,
+      payplusRefundInvoiceNumber: refundDoc.invoiceNumber,
+      payplusRefundInvoiceUrl: refundDoc.invoiceUrl,
       updatedAt: new Date(),
     })
     .where(eq(invoices.id, inv.id))

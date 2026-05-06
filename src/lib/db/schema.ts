@@ -340,6 +340,23 @@ export const invoices = pgTable(
       length: 50,
     }),
 
+    /**
+     * When an invoice is refunded, PayPlus issues a separate credit-note
+     * document (inv_refund). These fields track that document so the UI
+     * can offer a download for both the original receipt and the credit
+     * note. Populated by the refund flow via /PaymentPages/ipn-full.
+     */
+    payplusRefundTransactionUid: varchar("payplus_refund_transaction_uid", {
+      length: 100,
+    }),
+    payplusRefundInvoiceUuid: varchar("payplus_refund_invoice_uuid", {
+      length: 100,
+    }),
+    payplusRefundInvoiceNumber: varchar("payplus_refund_invoice_number", {
+      length: 50,
+    }),
+    payplusRefundInvoiceUrl: text("payplus_refund_invoice_url"),
+
     subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
     vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
     totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),

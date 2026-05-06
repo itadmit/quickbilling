@@ -18,7 +18,8 @@ import { getInvoiceForTransaction } from "@/lib/payplus/transactions";
 export const POST = withCronAuth(async () => {
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const candidates = await db
+  // ── Pass A: original invoice URL for charges ────────────────
+  const chargeCandidates = await db
     .select({
       id: invoices.id,
       invoiceNumber: invoices.invoiceNumber,
@@ -34,18 +35,13 @@ export const POST = withCronAuth(async () => {
     )
     .limit(50);
 
-  let filled = 0;
-  let stillMissing = 0;
-  const examples: Array<{ invoice: string; ok: boolean }> = [];
-
-  for (const c of candidates) {
+  let chargeFilled = 0;
+  for (const c of chargeCandidates) {
     if (!c.transactionUid) continue;
-
     const inv = await getInvoiceForTransaction(c.transactionUid, {
       retries: 0,
       delayMs: 0,
     });
-
     if (inv.invoiceUuid && inv.invoiceUrl) {
       await db
         .update(invoices)
@@ -56,18 +52,52 @@ export const POST = withCronAuth(async () => {
           updatedAt: new Date(),
         })
         .where(eq(invoices.id, c.id));
-      filled++;
-      examples.push({ invoice: c.invoiceNumber, ok: true });
-    } else {
-      stillMissing++;
-      examples.push({ invoice: c.invoiceNumber, ok: false });
+      chargeFilled++;
+    }
+  }
+
+  // ── Pass B: credit-note URL for refunds ────────────────────
+  const refundCandidates = await db
+    .select({
+      id: invoices.id,
+      invoiceNumber: invoices.invoiceNumber,
+      refundTransactionUid: invoices.payplusRefundTransactionUid,
+    })
+    .from(invoices)
+    .where(
+      and(
+        isNull(invoices.payplusRefundInvoiceUrl),
+        isNotNull(invoices.payplusRefundTransactionUid),
+        gte(invoices.createdAt, cutoff),
+      ),
+    )
+    .limit(50);
+
+  let refundFilled = 0;
+  for (const c of refundCandidates) {
+    if (!c.refundTransactionUid) continue;
+    const inv = await getInvoiceForTransaction(c.refundTransactionUid, {
+      retries: 0,
+      delayMs: 0,
+    });
+    if (inv.invoiceUuid && inv.invoiceUrl) {
+      await db
+        .update(invoices)
+        .set({
+          payplusRefundInvoiceUuid: inv.invoiceUuid,
+          payplusRefundInvoiceNumber: inv.invoiceNumber,
+          payplusRefundInvoiceUrl: inv.invoiceUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, c.id));
+      refundFilled++;
     }
   }
 
   return {
-    scanned: candidates.length,
-    filled,
-    stillMissing,
-    examples: examples.slice(0, 5),
+    chargeScanned: chargeCandidates.length,
+    chargeFilled,
+    refundScanned: refundCandidates.length,
+    refundFilled,
   };
 });
