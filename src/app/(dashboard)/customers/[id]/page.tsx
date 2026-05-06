@@ -168,17 +168,30 @@ export default async function CustomerDetailPage({
                     {formatDate(inv.createdAt)}
                   </td>
                   <td className="px-5 py-4">
-                    {inv.payplusInvoiceUrl && (
-                      <a
-                        href={inv.payplusInvoiceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 text-xs"
-                      >
-                        פתח
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {inv.payplusInvoiceUrl && (
+                        <a
+                          href={inv.payplusInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 text-xs"
+                        >
+                          חשבונית
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {inv.payplusRefundInvoiceUrl && (
+                        <a
+                          href={inv.payplusRefundInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-rose-700 hover:text-rose-900 text-xs"
+                        >
+                          זיכוי
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -3,7 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { and, desc, eq, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { customers, invoices, products } from "@/lib/db/schema";
-import { formatDate, formatILS } from "@/lib/format";
+import { formatDateTime, formatILS } from "@/lib/format";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { FilterBar, FilterSelect } from "@/components/dashboard/filter-bar";
@@ -145,21 +145,34 @@ export default async function InvoicesPage({
                   <td className="px-5 py-4 ltr-num font-medium text-neutral-900">
                     {formatILS(inv.totalAmount)}
                   </td>
-                  <td className="px-5 py-4 text-neutral-500 text-xs">
-                    {formatDate(inv.createdAt)}
+                  <td className="px-5 py-4 text-neutral-500 text-xs ltr-num whitespace-nowrap">
+                    {formatDateTime(inv.createdAt).replace(", ", " | ")}
                   </td>
                   <td className="px-5 py-4">
-                    {inv.payplusInvoiceUrl && (
-                      <a
-                        href={inv.payplusInvoiceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 text-xs"
-                      >
-                        פתח
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {inv.payplusInvoiceUrl && (
+                        <a
+                          href={inv.payplusInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 text-xs"
+                        >
+                          חשבונית
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {inv.payplusRefundInvoiceUrl && (
+                        <a
+                          href={inv.payplusRefundInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-rose-700 hover:text-rose-900 text-xs"
+                        >
+                          זיכוי
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

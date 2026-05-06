@@ -77,34 +77,77 @@ export async function POST(request: Request) {
     event.transactionUid &&
     (event.invoiceUuid || event.invoiceUrl)
   ) {
+    // Determine whether this IPN refers to the original charge or a
+    // refund. PayPlus marks the refund callback with transaction_type
+    // "Refund". Match by either:
+    //   - payplus_transaction_uid (charge → original invoice columns)
+    //   - payplus_refund_transaction_uid (refund → refund_invoice_* columns)
+    const isRefund = event.transactionType === "Refund";
+
     const [inv] = await db
       .select()
       .from(invoices)
-      .where(eq(invoices.payplusTransactionUid, event.transactionUid))
+      .where(
+        eq(
+          isRefund
+            ? invoices.payplusRefundTransactionUid
+            : invoices.payplusTransactionUid,
+          event.transactionUid,
+        ),
+      )
       .limit(1);
 
-    if (inv && !inv.payplusInvoiceUrl) {
+    if (!inv) {
+      return NextResponse.json({
+        ok: true,
+        path: "post_charge",
+        attached_pdf: false,
+        reason: "no_matching_invoice",
+      });
+    }
+
+    if (isRefund) {
+      if (inv.payplusRefundInvoiceUrl) {
+        return NextResponse.json({ ok: true, path: "post_refund", replay: true });
+      }
       await db
         .update(invoices)
         .set({
-          payplusInvoiceUuid: event.invoiceUuid ?? inv.payplusInvoiceUuid,
-          payplusInvoiceNumber:
-            event.invoiceNumber ?? inv.payplusInvoiceNumber,
-          payplusInvoiceUrl: event.invoiceUrl ?? inv.payplusInvoiceUrl,
+          payplusRefundInvoiceUuid:
+            event.invoiceUuid ?? inv.payplusRefundInvoiceUuid,
+          payplusRefundInvoiceNumber:
+            event.invoiceNumber ?? inv.payplusRefundInvoiceNumber,
+          payplusRefundInvoiceUrl:
+            event.invoiceUrl ?? inv.payplusRefundInvoiceUrl,
           updatedAt: new Date(),
         })
         .where(eq(invoices.id, inv.id));
       return NextResponse.json({
         ok: true,
-        path: "post_charge",
+        path: "post_refund",
         invoice_id: inv.id,
         attached_pdf: true,
       });
     }
+
+    if (inv.payplusInvoiceUrl) {
+      return NextResponse.json({ ok: true, path: "post_charge", replay: true });
+    }
+    await db
+      .update(invoices)
+      .set({
+        payplusInvoiceUuid: event.invoiceUuid ?? inv.payplusInvoiceUuid,
+        payplusInvoiceNumber:
+          event.invoiceNumber ?? inv.payplusInvoiceNumber,
+        payplusInvoiceUrl: event.invoiceUrl ?? inv.payplusInvoiceUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(invoices.id, inv.id));
     return NextResponse.json({
       ok: true,
       path: "post_charge",
-      attached_pdf: false,
+      invoice_id: inv.id,
+      attached_pdf: true,
     });
   }
 
