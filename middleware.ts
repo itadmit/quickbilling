@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/nextauth";
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isAuthed = !!req.auth?.user;
+
+  // PayPlus can deliver the post-payment redirect as either GET (params
+  // in URL) or POST (params in form body), depending on the dashboard
+  // setting. Convert POST→GET via 303 so the page (which only reads
+  // searchParams) renders identically in both cases.
+  if (
+    req.method === "POST" &&
+    (pathname === "/billing/success" || pathname === "/billing/failed")
+  ) {
+    const formData = await req.formData();
+    const target = req.nextUrl.clone();
+    target.search = "";
+    for (const [k, v] of formData.entries()) {
+      target.searchParams.set(k, typeof v === "string" ? v : "");
+    }
+    return NextResponse.redirect(target, 303);
+  }
+
   const isPublic =
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
