@@ -57,6 +57,12 @@ export const POST = withCronAuth(async () => {
   }
 
   // ── Pass B: credit-note URL for refunds ────────────────────
+  // Tighter window: refund credit-notes have so far never been
+  // findable via /PaymentPages/ipn-full keyed on the refund_uid in
+  // PayPlus dev (it returns "can-not-find-transaction_uid"). We still
+  // try, in case PayPlus enables it for prod or backfills late, but
+  // bound this to refunds in the last 24h to keep API noise low.
+  const refundCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const refundCandidates = await db
     .select({
       id: invoices.id,
@@ -68,7 +74,7 @@ export const POST = withCronAuth(async () => {
       and(
         isNull(invoices.payplusRefundInvoiceUrl),
         isNotNull(invoices.payplusRefundTransactionUid),
-        gte(invoices.createdAt, cutoff),
+        gte(invoices.refundedAt, refundCutoff),
       ),
     )
     .limit(50);
