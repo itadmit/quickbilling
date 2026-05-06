@@ -24,46 +24,41 @@ export default async function BillingSuccessPage({
   const moreInfo = get("more_info");
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-6 pt-10 pb-12">
-      <div className="mb-12">
-        <Logo size="md" tone="dark" />
-      </div>
-
-      <div className="flex-1 flex items-center justify-center w-full">
-        <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-50/40">
-            <Check className="h-8 w-8 text-emerald-600" strokeWidth={2.5} />
-          </div>
-
-          <h1 className="text-[28px] font-semibold tracking-tight text-neutral-900 mb-2">
-            התשלום בוצע בהצלחה
-          </h1>
-          <p className="text-[14px] text-neutral-500 mb-10">
-            {description ?? "תודה — אישור על העסקה ישלח אליך במייל."}
-          </p>
-
-          {(amount || fourDigits || method || type || date || moreInfo) && (
-            <dl className="text-right space-y-3 rounded-2xl border border-neutral-200 bg-white px-5 py-5">
-              {amount && (
-                <Row
-                  label="סכום"
-                  value={`${amount}${currency ? ` ${currency}` : " ₪"}`}
-                />
-              )}
-              {fourDigits && (
-                <Row label="כרטיס" value={`•••• ${fourDigits}`} />
-              )}
-              {method && <Row label="אמצעי" value={methodLabel(method)} />}
-              {type && <Row label="סוג" value={typeLabel(type)} />}
-              {date && <Row label="תאריך" value={date} />}
-              {moreInfo && <Row label="הערה" value={moreInfo} />}
-            </dl>
-          )}
-
-          <p className="mt-8 text-[12px] text-neutral-400">
-            ניתן לסגור את החלון.
-          </p>
+    <div className="min-h-screen flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-md text-center">
+        <div className="mb-8 flex justify-center">
+          <Logo size="md" tone="dark" />
         </div>
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-50/40">
+          <Check className="h-8 w-8 text-emerald-600" strokeWidth={2.5} />
+        </div>
+
+        <h1 className="text-[28px] font-semibold tracking-tight text-neutral-900 mb-2">
+          התשלום בוצע בהצלחה
+        </h1>
+        <p className="text-[14px] text-neutral-500 mb-10">
+          {description ?? "תודה — אישור על העסקה ישלח אליך במייל."}
+        </p>
+
+        {(amount || fourDigits || method || type || date || moreInfo) && (
+          <dl className="text-right space-y-3 rounded-2xl border border-neutral-200 bg-white px-5 py-5">
+            {amount && (
+              <Row
+                label="סכום"
+                value={`${amount}${currency ? ` ${currency}` : " ₪"}`}
+              />
+            )}
+            {fourDigits && <Row label="כרטיס" value={`•••• ${fourDigits}`} />}
+            {method && <Row label="אמצעי" value={methodLabel(method)} />}
+            {type && <Row label="סוג" value={typeLabel(type)} />}
+            {date && <Row label="תאריך" value={date} />}
+            {moreInfo && <Row label="הערה" value={moreInfo} />}
+          </dl>
+        )}
+
+        <p className="mt-8 text-[12px] text-neutral-400">
+          ניתן לסגור את החלון.
+        </p>
       </div>
     </div>
   );

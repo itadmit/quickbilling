@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
   customers,
@@ -47,6 +47,22 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const hashHeader = request.headers.get("hash");
   const userAgent = request.headers.get("user-agent");
+
+  // TEMP DEBUG: capture every IPN body + headers before any check, so we
+  // can observe whether PayPlus is delivering, what shape, and whether the
+  // signature passes. To be reverted once we have the answer.
+  try {
+    const allHeaders: Record<string, string> = {};
+    request.headers.forEach((v, k) => {
+      allHeaders[k] = v;
+    });
+    await db.execute(
+      sql`INSERT INTO _ipn_debug (raw_body, hash_header, user_agent, all_headers, received_at)
+          VALUES (${rawBody}, ${hashHeader ?? null}, ${userAgent ?? null}, ${JSON.stringify(allHeaders)}, now())`,
+    );
+  } catch {
+    // table might not exist yet — ignore
+  }
 
   // In dev, allow unsigned (PayPlus sandbox sometimes omits the header).
   const isProd = process.env.NODE_ENV === "production";
