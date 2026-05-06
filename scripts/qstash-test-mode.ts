@@ -29,6 +29,7 @@ const PROD_SCHEDULES: ScheduleSpec[] = [
   { name: "dunning-retry", path: "/api/cron/dunning-retry", cron: "0 4 * * *" },
   { name: "trial-expiry", path: "/api/cron/trial-expiry", cron: "0 5 * * *" },
   { name: "webhook-drain", path: "/api/cron/webhook-drain", cron: "*/5 * * * *" },
+  { name: "invoice-pdf-backfill", path: "/api/cron/invoice-pdf-backfill", cron: "*/10 * * * *" },
 ];
 
 // Test mode: every minute. Deliberately stagger them by 0/1/2/... seconds
