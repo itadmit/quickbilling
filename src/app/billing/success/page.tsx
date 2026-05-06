@@ -42,19 +42,23 @@ export default async function BillingSuccessPage({
             {description ?? "תודה — אישור על העסקה ישלח אליך במייל."}
           </p>
 
-          <dl className="text-right space-y-3 rounded-2xl border border-neutral-200 bg-white px-5 py-5">
-            {amount && (
-              <Row
-                label="סכום"
-                value={`${amount}${currency ? ` ${currency}` : " ₪"}`}
-              />
-            )}
-            {fourDigits && <Row label="כרטיס" value={`•••• ${fourDigits}`} />}
-            {method && <Row label="אמצעי" value={methodLabel(method)} />}
-            {type && <Row label="סוג" value={typeLabel(type)} />}
-            {date && <Row label="תאריך" value={date} />}
-            {moreInfo && <Row label="הערה" value={moreInfo} />}
-          </dl>
+          {(amount || fourDigits || method || type || date || moreInfo) && (
+            <dl className="text-right space-y-3 rounded-2xl border border-neutral-200 bg-white px-5 py-5">
+              {amount && (
+                <Row
+                  label="סכום"
+                  value={`${amount}${currency ? ` ${currency}` : " ₪"}`}
+                />
+              )}
+              {fourDigits && (
+                <Row label="כרטיס" value={`•••• ${fourDigits}`} />
+              )}
+              {method && <Row label="אמצעי" value={methodLabel(method)} />}
+              {type && <Row label="סוג" value={typeLabel(type)} />}
+              {date && <Row label="תאריך" value={date} />}
+              {moreInfo && <Row label="הערה" value={moreInfo} />}
+            </dl>
+          )}
 
           <p className="mt-8 text-[12px] text-neutral-400">
             ניתן לסגור את החלון.
