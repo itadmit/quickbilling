@@ -57,6 +57,11 @@ export const POST = withProductAuth(async (ctx, params) => {
     transactionUid: inv.payplusTransactionUid,
     amount: refundAmount,
     reason: parsed.data.reason,
+    // PayPlus's `initial_invoice` defaults to `false` on RefundByTransactionUID,
+    // which skips the credit-note document. We explicitly opt in so an
+    // inv_refund document is generated and emailed to the customer, and
+    // can later be pulled via /PaymentPages/ipn-full for the URL.
+    initialInvoice: true,
   });
 
   if (!result.success) {
@@ -66,9 +71,9 @@ export const POST = withProductAuth(async (ctx, params) => {
     };
   }
 
-  // Pull the credit-note document for this refund. Best-effort: don't
-  // fail the refund if the lookup errors. The backfill cron sweeps
-  // anything that's still missing later.
+  // Pull the credit-note (inv_refund) document by the refund transaction
+  // UID. Best-effort: don't fail the refund if PayPlus is still preparing
+  // the document — the backfill cron will pick it up later.
   const refundDoc = result.refundUid
     ? await getInvoiceForTransaction(result.refundUid)
     : { invoiceUuid: undefined, invoiceNumber: undefined, invoiceUrl: undefined };
