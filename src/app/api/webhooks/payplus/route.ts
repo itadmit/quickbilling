@@ -64,11 +64,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 });
   }
 
-  console.log("[payplus webhook] keys:", Object.keys(payload));
-  console.log("[payplus webhook] invoice block:", JSON.stringify(payload.invoice ?? null));
-  console.log("[payplus webhook] transaction.uid:", payload.transaction?.uid ?? payload.transaction_uid);
-  console.log("[payplus webhook] transaction_type:", payload.transaction_type);
-
   const event = normalizePayPlusEvent(payload);
   const moreInfo = parseMoreInfo<MoreInfoData>(event.moreInfo1);
 

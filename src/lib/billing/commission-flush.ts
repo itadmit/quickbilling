@@ -11,6 +11,7 @@ import {
   subscriptions,
 } from "../db/schema";
 import { chargeWithToken } from "../payplus/charge";
+import { getInvoiceForTransaction } from "../payplus/transactions";
 import { withVat } from "../payplus/vat";
 import { generateInvoiceNumber } from "./invoice-number";
 import { getVatRate } from "../settings";
@@ -134,10 +135,14 @@ export async function flushCommissions(): Promise<{
       continue;
     }
 
-    // PayPlus invoice metadata: from Charge response if returned inline,
-    // otherwise backfilled by the IPN webhook (see /api/webhooks/payplus).
-    const docUuid = charge.invoiceUuid;
-    const docUrl = charge.invoiceUrl;
+    // J4 charge doesn't return the invoice synchronously and there's no
+    // IPN for direct token charges. Pull the auto-created invoice via
+    // /PaymentPages/ipn-full.
+    const inv = charge.transactionUid
+      ? await getInvoiceForTransaction(charge.transactionUid)
+      : { success: false };
+    const docUuid = inv.invoiceUuid ?? charge.invoiceUuid;
+    const docUrl = inv.invoiceUrl ?? charge.invoiceUrl;
 
     // Find the active subscription for this customer+product (for FK link)
     const [sub] = await db

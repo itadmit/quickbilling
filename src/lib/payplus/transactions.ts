@@ -1,23 +1,36 @@
 import { payplusRequest, PAYPLUS_CONFIG } from "./client";
 
 /**
- * Look up a single transaction by UID via POST /Transactions/View.
+ * Pull full transaction details (including the auto-generated invoice
+ * UUID/URL) for a J4 charge that completed.
+ *
+ * Background: `Transactions/Charge` (J4) does NOT return the invoice
+ * block in its sync response, and PayPlus does not fire any IPN for
+ * direct token charges (no payment-page mediation). The supported
+ * workaround per PayPlus support: after a successful charge, pull the
+ * transaction via `POST /PaymentPages/ipn-full` — that response carries
+ * `invoice_uuid`, `invoice_original_url`, `invoice_copy_url` as flat
+ * fields under `data`.
  */
-export async function getTransactionDetails(transactionUid: string): Promise<{
+export async function getInvoiceForTransaction(transactionUid: string): Promise<{
   success: boolean;
+  invoiceUuid?: string;
   invoiceNumber?: string;
   invoiceUrl?: string;
-  status?: string;
+  invoiceCopyUrl?: string;
+  invoiceStatus?: string;
   raw?: unknown;
 }> {
   try {
     const response = await payplusRequest<{
-      transaction_uid?: string;
-      invoice_number?: string;
-      invoice_link?: string;
-      status_code?: string;
-    }>("Transactions/View", "POST", {
+      invoice_uuid?: string;
+      invoice_docu_number?: string;
+      invoice_original_url?: string;
+      invoice_copy_url?: string;
+      invoice_status?: string;
+    }>("PaymentPages/ipn-full", "POST", {
       transaction_uid: transactionUid,
+      related_transaction: false,
     });
 
     if (response.results.status !== "success") {
@@ -26,13 +39,15 @@ export async function getTransactionDetails(transactionUid: string): Promise<{
 
     return {
       success: true,
-      invoiceNumber: response.data?.invoice_number,
-      invoiceUrl: response.data?.invoice_link,
-      status: response.data?.status_code,
+      invoiceUuid: response.data?.invoice_uuid,
+      invoiceNumber: response.data?.invoice_docu_number,
+      invoiceUrl: response.data?.invoice_original_url,
+      invoiceCopyUrl: response.data?.invoice_copy_url,
+      invoiceStatus: response.data?.invoice_status,
       raw: response,
     };
   } catch (err) {
-    console.error("[PayPlus] getTransactionDetails failed:", err);
+    console.warn("[PayPlus] getInvoiceForTransaction failed:", err);
     return { success: false };
   }
 }

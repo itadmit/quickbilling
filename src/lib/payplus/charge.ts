@@ -18,12 +18,9 @@ import type {
 export async function chargeWithToken(
   params: ChargeWithTokenParams,
 ): Promise<ChargeResult> {
-  // PayPlus's Transactions/Charge isn't documented to accept refURL_callback,
-  // but in practice — when the field is present — PayPlus does fire the IPN
-  // back to it. Without this we depend on the account-level callback being
-  // configured correctly (which is fragile / per-page rather than global).
-  const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "")}/api/webhooks/payplus`;
-
+  // J4 doesn't accept any callback URL parameter, and PayPlus doesn't fire
+  // an IPN for direct token charges (per their support). Invoice details are
+  // pulled separately via getInvoiceForTransaction after the charge.
   const buildBody = (includeCustomerUid: boolean): Record<string, unknown> => ({
     terminal_uid: PAYPLUS_CONFIG.terminalUid,
     cashier_uid: PAYPLUS_CONFIG.cashierUid,
@@ -38,12 +35,6 @@ export async function chargeWithToken(
       params.customerUid && { customer_uid: params.customerUid }),
 
     initial_invoice: true,
-
-    // Both refURL_callback AND callback_url to be safe — different PayPlus
-    // accounts have honored slightly different parameter names historically.
-    refURL_callback: callbackUrl,
-    callback_url: callbackUrl,
-    send_failure_callback: true,
 
     products: params.invoiceItems?.map((item) => ({
       name: item.name,
@@ -95,10 +86,6 @@ export async function chargeWithToken(
         raw: response,
       };
     }
-
-    console.log("[PayPlus Charge] response.data keys:", Object.keys(response.data ?? {}));
-    console.log("[PayPlus Charge] invoice block:", JSON.stringify(response.data?.invoice ?? null));
-    console.log("[PayPlus Charge] transaction.uid:", response.data?.transaction?.uid);
 
     return {
       success: true,

@@ -2,6 +2,7 @@ import { signIn, auth } from "@/lib/auth/nextauth";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { Logo } from "@/components/logo";
+import { LoginSubmitButton } from "./submit-button";
 
 export default async function LoginPage({
   searchParams,
@@ -94,12 +95,7 @@ export default async function LoginPage({
             />
 
             <div className="pt-2">
-              <button
-                type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-medium rounded-full px-6 py-3 text-[15px] hover:bg-emerald-700 active:scale-[0.99] transition"
-              >
-                כניסה
-              </button>
+              <LoginSubmitButton />
             </div>
           </form>
 

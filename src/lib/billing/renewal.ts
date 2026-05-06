@@ -16,6 +16,7 @@ import {
   type Product,
 } from "../db/schema";
 import { chargeWithToken } from "../payplus/charge";
+import { getInvoiceForTransaction } from "../payplus/transactions";
 import { withVat } from "../payplus/vat";
 import { generateInvoiceNumber } from "./invoice-number";
 import { getVatRate } from "../settings";
@@ -185,13 +186,16 @@ export async function renewSubscription(
     };
   }
 
-  // PayPlus delivers invoice metadata two ways:
-  //   1) inline on the Charge response (`response.data.invoice`) — sometimes
-  //   2) async via the IPN webhook → handled in /api/webhooks/payplus (PATH B)
-  // We persist whatever the Charge response gave us; the IPN backfills nulls.
-  const docUuid = charge.invoiceUuid;
-  const docUrl = charge.invoiceUrl;
-  const docNumber = charge.invoiceNumber;
+  // J4 charge doesn't return the invoice block synchronously, and PayPlus
+  // doesn't fire an IPN for direct token charges. Pull the auto-created
+  // invoice details via /PaymentPages/ipn-full (best-effort — never fails
+  // the renewal even if the lookup errors).
+  const inv = charge.transactionUid
+    ? await getInvoiceForTransaction(charge.transactionUid)
+    : { success: false };
+  const docUuid = inv.invoiceUuid ?? charge.invoiceUuid;
+  const docUrl = inv.invoiceUrl ?? charge.invoiceUrl;
+  const docNumber = inv.invoiceNumber ?? charge.invoiceNumber;
 
   // 8) Persist invoice + items + charge attempt + advance period.
   const periodStart = new Date();
