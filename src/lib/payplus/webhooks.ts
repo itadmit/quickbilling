@@ -61,6 +61,8 @@ export interface PayPlusIpnPayload {
   transaction?: {
     uid?: string;
     payment_request_uid?: string;
+    /** Tokenization callbacks use this name (page-mediated J2/J5 token-only). */
+    payment_page_request_uid?: string;
     number?: string;
     type?: string;
     date?: string;
@@ -258,7 +260,7 @@ export function normalizePayPlusEvent(
   return {
     transactionUid,
     pageRequestUid: isIpn
-      ? t?.payment_request_uid
+      ? t?.payment_request_uid ?? t?.payment_page_request_uid
       : payload.page_request_uid,
     statusCode,
     status,

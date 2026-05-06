@@ -125,21 +125,41 @@ export async function POST(request: Request) {
   }
 
   // ─── PATH A: tokenization callback ────────────────────────────────
-  if (!moreInfo?.customerId || !moreInfo?.contextId) {
-    console.warn("[payplus webhook] missing more_info_1, ignoring", {
-      transactionUid: event.transactionUid,
-    });
-    return NextResponse.json({ ok: true, ignored: true });
+  // Primary lookup: more_info_1 (carries our session ID, present on
+  // J4/J5 charge callbacks). Fallback: page_request_uid — PayPlus's
+  // token-only (charge_method=5) callback DOES NOT echo more_info_1
+  // back, only the page UID, so we match the session by that instead.
+  let session = null as typeof paymentMethodSetupSessions.$inferSelect | null;
+
+  if (moreInfo?.contextId) {
+    const [s] = await db
+      .select()
+      .from(paymentMethodSetupSessions)
+      .where(eq(paymentMethodSetupSessions.id, moreInfo.contextId))
+      .limit(1);
+    session = s ?? null;
   }
 
-  const [session] = await db
-    .select()
-    .from(paymentMethodSetupSessions)
-    .where(eq(paymentMethodSetupSessions.id, moreInfo.contextId))
-    .limit(1);
+  if (!session && event.pageRequestUid) {
+    const [s] = await db
+      .select()
+      .from(paymentMethodSetupSessions)
+      .where(
+        eq(
+          paymentMethodSetupSessions.payplusPageRequestUid,
+          event.pageRequestUid,
+        ),
+      )
+      .limit(1);
+    session = s ?? null;
+  }
 
   if (!session) {
-    console.warn("[payplus webhook] unknown contextId", moreInfo.contextId);
+    console.warn("[payplus webhook] no matching session", {
+      contextId: moreInfo?.contextId,
+      pageRequestUid: event.pageRequestUid,
+      transactionUid: event.transactionUid,
+    });
     return NextResponse.json({ ok: true, ignored: true });
   }
 
@@ -166,10 +186,15 @@ export async function POST(request: Request) {
       ? `${event.cardExpiryMonth}/${event.cardExpiryYear}`
       : undefined;
 
+  // moreInfo carries the customerId on J4/J5 callbacks. Token-only
+  // callbacks (charge_method=5) lack it — fall back to the session's
+  // own customer_id.
+  const customerId = moreInfo?.customerId ?? session.customerId;
+
   const [pm] = await db
     .insert(paymentMethods)
     .values({
-      customerId: moreInfo.customerId,
+      customerId,
       payplusCustomerUid: event.customerUid,
       payplusTokenUid: event.tokenUid,
       cardBrand: event.cardBrand,
@@ -185,7 +210,7 @@ export async function POST(request: Request) {
     await db
       .update(customers)
       .set({ payplusCustomerUid: event.customerUid, updatedAt: new Date() })
-      .where(eq(customers.id, moreInfo.customerId));
+      .where(eq(customers.id, customerId));
   }
 
   await db
@@ -202,7 +227,7 @@ export async function POST(request: Request) {
     eventType: "payment_method.created",
     payload: {
       payment_method_id: pm.id,
-      customer_id: moreInfo.customerId,
+      customer_id: customerId,
       card_brand: pm.cardBrand,
       card_last4: pm.cardLast4,
       card_expiry: pm.cardExpiry,
