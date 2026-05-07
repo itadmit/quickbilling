@@ -1,8 +1,11 @@
 import { and, eq, gte, isNotNull, isNull } from "drizzle-orm";
 import { withCronAuth } from "@/lib/cron-handler";
 import { db } from "@/lib/db/client";
-import { invoices } from "@/lib/db/schema";
-import { getInvoiceForTransaction } from "@/lib/payplus/transactions";
+import { customers, invoices } from "@/lib/db/schema";
+import {
+  findRefundDocument,
+  getInvoiceForTransaction,
+} from "@/lib/payplus/transactions";
 
 /**
  * Backfill payplus_invoice_url / payplus_invoice_uuid on invoices that
@@ -57,23 +60,26 @@ export const POST = withCronAuth(async () => {
   }
 
   // ── Pass B: credit-note URL for refunds ────────────────────
-  // Tighter window: refund credit-notes have so far never been
-  // findable via /PaymentPages/ipn-full keyed on the refund_uid in
-  // PayPlus dev (it returns "can-not-find-transaction_uid"). We still
-  // try, in case PayPlus enables it for prod or backfills late, but
-  // bound this to refunds in the last 24h to keep API noise low.
+  // PayPlus refund UIDs aren't recognized by /PaymentPages/ipn-full,
+  // so we use /books/docs/list (search) keyed on customer_uid +
+  // amount + date. Bounded to the last 24h of refunds to keep API
+  // noise low.
   const refundCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const refundCandidates = await db
     .select({
       id: invoices.id,
       invoiceNumber: invoices.invoiceNumber,
-      refundTransactionUid: invoices.payplusRefundTransactionUid,
+      totalAmount: invoices.totalAmount,
+      refundedAt: invoices.refundedAt,
+      payplusCustomerUid: customers.payplusCustomerUid,
     })
     .from(invoices)
+    .innerJoin(customers, eq(customers.id, invoices.customerId))
     .where(
       and(
         isNull(invoices.payplusRefundInvoiceUrl),
         isNotNull(invoices.payplusRefundTransactionUid),
+        isNotNull(customers.payplusCustomerUid),
         gte(invoices.refundedAt, refundCutoff),
       ),
     )
@@ -81,18 +87,20 @@ export const POST = withCronAuth(async () => {
 
   let refundFilled = 0;
   for (const c of refundCandidates) {
-    if (!c.refundTransactionUid) continue;
-    const inv = await getInvoiceForTransaction(c.refundTransactionUid, {
-      retries: 0,
-      delayMs: 0,
+    if (!c.payplusCustomerUid || !c.refundedAt) continue;
+    const fromDate = c.refundedAt.toISOString().slice(0, 10);
+    const found = await findRefundDocument({
+      customerUid: c.payplusCustomerUid,
+      amount: Number(c.totalAmount),
+      fromDate,
     });
-    if (inv.invoiceUuid && inv.invoiceUrl) {
+    if (found.found && found.uuid && found.url) {
       await db
         .update(invoices)
         .set({
-          payplusRefundInvoiceUuid: inv.invoiceUuid,
-          payplusRefundInvoiceNumber: inv.invoiceNumber,
-          payplusRefundInvoiceUrl: inv.invoiceUrl,
+          payplusRefundInvoiceUuid: found.uuid,
+          payplusRefundInvoiceNumber: found.number,
+          payplusRefundInvoiceUrl: found.url,
           updatedAt: new Date(),
         })
         .where(eq(invoices.id, c.id));

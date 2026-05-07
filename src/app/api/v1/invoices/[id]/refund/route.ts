@@ -2,10 +2,10 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { withProductAuth } from "@/lib/auth/handler";
 import { db } from "@/lib/db/client";
-import { invoices } from "@/lib/db/schema";
+import { customers, invoices } from "@/lib/db/schema";
 import {
   refundTransaction,
-  getInvoiceForTransaction,
+  findRefundDocument,
 } from "@/lib/payplus/transactions";
 import { emitWebhook } from "@/lib/webhooks/delivery";
 
@@ -71,12 +71,25 @@ export const POST = withProductAuth(async (ctx, params) => {
     };
   }
 
-  // Pull the credit-note (inv_refund) document by the refund transaction
-  // UID. Best-effort: don't fail the refund if PayPlus is still preparing
-  // the document — the backfill cron will pick it up later.
-  const refundDoc = result.refundUid
-    ? await getInvoiceForTransaction(result.refundUid)
-    : { invoiceUuid: undefined, invoiceNumber: undefined, invoiceUrl: undefined };
+  // Look up the credit-note (inv_refund) document. PayPlus refund UIDs
+  // aren't recognized by /PaymentPages/ipn-full or Transactions/View, so
+  // we search the documents API by customer + amount + today's date.
+  // Best-effort: PayPlus may not have issued the doc yet (up to ~120s
+  // delay) — the backfill cron picks it up later.
+  let refundDoc: Awaited<ReturnType<typeof findRefundDocument>> = { found: false };
+  if (refundAmount && inv.customerId) {
+    const [cust] = await db
+      .select({ payplusCustomerUid: customers.payplusCustomerUid })
+      .from(customers)
+      .where(eq(customers.id, inv.customerId))
+      .limit(1);
+    if (cust?.payplusCustomerUid) {
+      refundDoc = await findRefundDocument({
+        customerUid: cust.payplusCustomerUid,
+        amount: refundAmount,
+      });
+    }
+  }
 
   const [updated] = await db
     .update(invoices)
@@ -84,9 +97,9 @@ export const POST = withProductAuth(async (ctx, params) => {
       status: "refunded",
       refundedAt: new Date(),
       payplusRefundTransactionUid: result.refundUid,
-      payplusRefundInvoiceUuid: refundDoc.invoiceUuid,
-      payplusRefundInvoiceNumber: refundDoc.invoiceNumber,
-      payplusRefundInvoiceUrl: refundDoc.invoiceUrl,
+      payplusRefundInvoiceUuid: refundDoc.uuid,
+      payplusRefundInvoiceNumber: refundDoc.number,
+      payplusRefundInvoiceUrl: refundDoc.url,
       updatedAt: new Date(),
     })
     .where(eq(invoices.id, inv.id))

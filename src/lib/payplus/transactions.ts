@@ -1,6 +1,78 @@
 import { payplusRequest, PAYPLUS_CONFIG } from "./client";
 
 /**
+ * Find a refund/credit-note document in PayPlus's Invoice+ system.
+ *
+ * Background: `Transactions/View` and `/PaymentPages/ipn-full` don't
+ * recognize refund transaction UIDs ("can-not-find-transaction_uid").
+ * Per PayPlus support, the way to retrieve refund docs from API is via
+ * `GET /books/docs/list` — but the `transaction_uuid` filter also
+ * doesn't work in dev. The reliable filter is `customer` (the PayPlus
+ * customer UID) + `types=inv_refund` + a date window, then pick the
+ * most recent matching `doc_amount`.
+ */
+export async function findRefundDocument(params: {
+  customerUid: string;
+  amount: number;
+  fromDate?: string; // YYYY-MM-DD, defaults to today
+}): Promise<{
+  found: boolean;
+  uuid?: string;
+  number?: string;
+  url?: string;
+  copyUrl?: string;
+}> {
+  const apiUrl = PAYPLUS_CONFIG.apiUrl.replace(/\/$/, "");
+  const url = new URL(`${apiUrl}/books/docs/list`);
+  url.searchParams.set("take", "20");
+  url.searchParams.set("customer", params.customerUid);
+  url.searchParams.set("types", "inv_refund");
+  url.searchParams.set("fromDate", params.fromDate ?? new Date().toISOString().slice(0, 10));
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "api-key": PAYPLUS_CONFIG.apiKey,
+        "secret-key": PAYPLUS_CONFIG.secretKey,
+      },
+    });
+    if (!response.ok) return { found: false };
+    const j = (await response.json()) as {
+      status?: string;
+      details?: {
+        items?: Array<{
+          uuid?: string;
+          number?: string;
+          doc_amount?: number;
+          original_doc?: string;
+          true_copy_doc?: string;
+          entity_type_name?: string;
+        }>;
+      };
+    };
+    const items = j.details?.items ?? [];
+    // Match by amount (within 1 agora)
+    const match = items.find(
+      (d) =>
+        d.entity_type_name === "inv_refund" &&
+        Math.abs((d.doc_amount ?? 0) - params.amount) < 0.01,
+    );
+    if (!match) return { found: false };
+    return {
+      found: true,
+      uuid: match.uuid,
+      number: match.number,
+      url: match.original_doc,
+      copyUrl: match.true_copy_doc,
+    };
+  } catch (err) {
+    console.warn("[PayPlus] findRefundDocument failed:", err);
+    return { found: false };
+  }
+}
+
+/**
  * Pull full transaction details (including the auto-generated invoice
  * UUID/URL) for a J4 charge that completed.
  *
